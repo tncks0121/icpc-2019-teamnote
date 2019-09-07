@@ -1,0 +1,281 @@
+\subsection{Arithmetic stuff}
+\begin{cpp}
+//ceil(a/b)
+ll ceildiv(ll a, ll b){
+  if(b < 0) return ceildiv(-a, -b);
+  if(a < 0) return (-a) / b;
+  return ((ull)a + (ull)b - 1ull) / b;
+}
+
+//floor(a/b)
+ll floordiv(ll a, ll b){
+  if(b < 0) return floordiv(-a, -b);
+  if(a >= 0) return a / b;
+  return -(ll)(((ull)(-a) + b - 1) / b);
+}
+
+ll __gcd(ll a, ll b);
+
+//egcd (ac + bd = gcd(a, b))
+pair<ll, ll> egcd(ll a, ll b){
+  if(b == 0) return {1, 0};
+  auto t = egcd(b, a%b);
+  return {t.second, t.first-t.second*(a/b)};
+}
+
+//modular inverse (ax = gcd(a, m) mod m)
+ll modinv(ll a, ll m){return (egcd(a,m).first%m + m)%m;}
+
+//modular power
+ll pow(ll a, ll x, ll mod){
+  a%= mod; ll r;
+  for(r=1; x; x/=2)
+    {if(x%2) r=modmul(r,a,m); a=modmul(a,a,m);}
+  return r;
+}
+
+//modular large multiplication
+ll modmul(ll a, ll b, ll m) {
+  return ll((__int128)a*(__int128)b%m);
+}
+
+int __builtin_clz(int x); // number of leading zero
+int __builtin_ctz(int x); // number of trailing zero
+int __builtin_popcount(int x); // number of 1-bits in x
+// use clzll, ctzll, popcountll for long long x
+
+last_bit == n&-n;
+floor(log2(n)) == 31 - __builtin_clz(n|1);
+floor(log2(n)) == 63 - __builtin_clzll(n|1);
+
+// 00111 01011 01101 01110 10011 ...
+ll next_perm(ll v){
+    ll t = v|(v-1);
+    int c = __builtin_ctz(v);
+    return (t+1) | (((~t & -~t)-1) >> (c+1));
+}
+\end{cpp}
+
+\subsection{Primality}
+\begin{cpp}
+typedef unsigned long long ull;
+bool witness(ull a, ull n, ull s){
+  if(a >= n) a%= n;
+  if(a <= 1) return true;
+  ull d = n>>s, x = pow(a, d, n);
+  if(x == 1 || x == n-1) return true;
+  while(s-- > 1){
+    x = modmul(x, x, n);
+    if(x == 1) return false;
+    if(x == n-1) return true;
+  }
+  return false;
+}
+
+bool millerRabin(ull n){
+  if(n == 2) return true;
+  if(n < 2 || n%2 == 0) return false;
+  ull d = n>>1, s = 1;
+  for(; (d&1)==0; s++) d>>=1;
+#define T(a) witness(a##ull, n, s)
+  if(n < 4759123141ull) return T(2) && T(7) && T(61);
+  return T(2) && T(325) && T(9375) && T(28178)
+    && T(450775) && T(9780504) && T(1795265022);
+}
+
+ll rho(ll n){
+  random_device rd; mt19937 gen(rd());
+  uniform_int_distribution<ll> dis(1, n-1);
+  ll x = dis(gen), c = dis(gen), g = 1; ll y = x;
+  while(g == 1){
+    x = (modmul(x, x, n) + c) % n;
+    y = (modmul(y, y, n) + c) % n;
+    y = (modmul(y, y, n) + c) % n;
+    g = __gcd(abs(x-y), n);
+  }
+  return g;
+}
+
+void factorize(ll n, vector<ll>& fl){
+  if(n == 1) return;
+  if(n%2 == 0) fl.push_back(2), factorize(n/2, fl);
+  else if(millerRabin(n)) fl.push_back(n);
+  else{
+    ll f = rho(n);
+    factorize(f, fl); factorize(n/f, fl);
+  }
+}
+\end{cpp}
+
+\subsection{CRT}
+\begin{cpp}
+// a = remainders; n = coprime divisors
+ll CRT(vector<ll> &a, vector<ll> &n, int pt = 0){
+    if(pt == a.size()-1) return a[pt];
+    ll a0 = a[pt], a1 = a[pt+1], n0 = n[pt], n1 = n[pt+1];
+    ll tmp = modinv(n0, n1);
+    ll tmp2 = (tmp*(a1-a0) % n1 + n1) % n1;
+    ll ora = a1, tgcd = __gcd(n0, n1);
+    a[pt+1] = a0 + n0/tgcd*tmp2;
+    n[pt+1]*= n0/tgcd;
+    ll ret = CRT(a, n, pt+1);
+    n[pt+1]/= n0/tgcd;
+    a[pt+1] = ora;
+    return ret;
+}
+\end{cpp}
+
+TODO when not coprime
+
+\subsection{Binomial Number}
+\begin{cpp}
+ll nck(ll n, ll k, ll m){
+  if(n < k) return 0;
+  ll res = 1;
+  for(int i=0; i<k; i++){
+    res = res*(n-i) % m;
+    res = res*pow(i+1, m-2, m) % m;
+  }
+  return res;
+}
+
+ll lucas(ll n, ll k, ll m){
+  ll res = 1;
+  while(n || k){
+    res = res*nck(n%m, k%m, m) % m;
+    n/= m, k/= m;
+  }
+  return res;
+}
+
+// or... precalculation and O(1)
+// define SZ yourself
+ll pow2[SZ+1], fact[SZ+1], ifact[SZ+1];
+ll ncr(int n, int k, ll MOD){
+    ll a = fact[n]*ifact[k] % MOD;
+    return a*ifact[n-k] % MOD;
+}
+int main(){
+  pow2[0] = 1, fact[0] = 1;
+  for(int i=1; i<=SZ; i++){
+    pow2[i] = pow2[i-1]*2 % MOD;
+    fact[i] = fact[i-1]*i % MOD;
+  }
+  ifact[SZ] = pow(fact[SZ], MOD-2, MOD);
+  for(int i=SZ-1; i>=0; i--)
+    ifact[i] = ifact[i+1]*(i+1)%MOD;
+}
+\end{cpp}
+
+\subsection{Matrix}
+\begin{cpp}
+template <typename T>
+struct Matrix{
+  int n; T mod; vector<vector<T>> mat;
+  Matrix(int n) :n{n}, mat(n, vector<T>(n)) {}
+  Matrix operator*(Matrix& B){
+    Matrix ans = Matrix(n);
+    for(int i=0;i<n;i++) for(int j=0;j<n;j++)
+      for(int b=0;b<n;b++)
+        ans.mat[i][j]+= mat[i][b]*B.mat[b][j];
+    return ans;
+  }
+  Matrix operator%(T mod){
+    Matrix ans = Matrix(n);
+    for(int i=0; i<n; i++) for(int j=0; j<n; j++)
+      ans.mat[i][j] = mat[i][j]%mod;
+    return ans;
+  }
+};
+
+template <class T>
+Matrix<T> matpow(Matrix<T> A, ll x, T mod){
+  A = A%mod; Matrix<T> r(A.n);
+  for(int i=0; i<A.n; i++) r.mat[i][i] = 1;
+  for(; x; x/=2){if(x%2) r = r*A%mod; A = A*A%mod;}
+  return r;
+}
+\end{cpp}
+
+\subsection{FFT}
+\begin{cpp}
+// f=0 forward; f=1 backward
+// 2^17 = 131072; 2^20 = 1048576
+int SZ = 19, N = 1<<SZ;
+int Rev(int x){
+  int r = 0;
+  for(int i=0; i<SZ; i++) r = r<<1 | (x&1), x>>= 1;
+  return r;
+}
+
+const double PI = acos(-1);
+typedef complex<double> CD;
+typedef vector<CD> VCD;
+void FFT(VCD& A, int f){
+  CD x, y, z;
+  for(int i=0; i<N; i++){
+    int j = Rev(i);
+    if(i < j) swap(A[i], A[j]);
+  }
+  for(int i=1; i<N; i<<= 1){
+    double w = PI / i;
+    if(f) w = -w;
+    CD x(cos(w), sin(w));
+    for(int j=0; j<N; j+= i<<1){
+      CD y(1);
+      for(int k=0; k<i; k++){
+        CD z = A[i+j+k] * y;
+        A[i+j+k] = A[j+k] - z, A[j+k]+= z;
+        y*= x;
+      }
+    }
+  }
+  if(f) for(int i=0; i<N; i++) A[i]/= N;
+}
+\end{cpp}
+
+\subsection{NTT}
+TODO
+
+\subsection{Gaussian Elimination}
+\begin{cpp}
+// INPUT:  a[][] = an n*n matrix
+//         b[][] = an n*m matrix
+// OUTPUT:   X  = an n*m matrix (stored in b[][])
+//       A^{-1} = an n*n matrix (stored in a[][])
+const double EPS = 1e-10;
+typedef vector<vector<double>> VVD;
+bool gauss_jordan(VVD& a, VVD& b) {
+  const int n = a.size(), m = b[0].size();
+  vector<int> irow(n), icol(n), ipiv(n);
+  for (int i=0; i<n; i++){
+    int pj = -1, pk = -1;
+    for(int j=0; j<n; j++) if(!ipiv[j])
+      for(int k=0; k<n; k++) if(!ipiv[k])
+        if(pj==-1 || fabs(a[j][k]) > fabs(a[pj][pk]))
+          pj=j, pk=k;
+    if(fabs(a[pj][pk]) < EPS) return false;
+    ipiv[pk]++;
+    swap(a[pj], a[pk]); swap(b[pj], b[pk]);
+    irow[i] = pj; icol[i] = pk;
+
+    double c = 1.0 / a[pk][pk];
+    a[pk][pk] = 1.0;
+    for(int p=0; p<n; p++) a[pk][p] *= c;
+    for(int p=0; p<m; p++) b[pk][p] *= c;
+    for(int p=0; p<n; p++) if (p != pk) {
+      c = a[p][pk]; a[p][pk] = 0;
+      for(int q=0; q<n; q++) a[p][q] -= a[pk][q] * c;
+      for(int q=0; q<m; q++) b[p][q] -= b[pk][q] * c;
+    }
+  }
+  for(int p=n-1; p>=0; p--) if(irow[p] != icol[p]){
+    for(int k=0; k<n; k++)
+      swap(a[k][irow[p]], a[k][icol[p]]);
+  }
+  return true;
+}
+\end{cpp}
+
+\subsection{Black Box Linear Algebra}
+TODO

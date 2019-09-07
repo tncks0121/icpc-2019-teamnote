@@ -1,0 +1,184 @@
+\subsection{Segment Tree (0-indexed)}
+\begin{cpp}
+struct Segtree{
+  typedef ll T; // Change this to what you need
+  T id = 0;
+  T combine(T a, T b){"a <-- b";}
+
+  int n; vector<T> arr;
+  Segtree(int sz): n{1} {
+    while(n < sz) n<<=1; arr.resize(n*2, id);
+  }
+  void update(int i, T v){
+    for(arr[i+=n]=v; i>>=1;)
+      arr[i] = combine(arr[i<<1], arr[i<<1|1]);
+  }
+  T query(int l, int r){
+    T resl=id, resr=id;
+    for(l+= n, r+= n+1; l < r; l/= 2, r/= 2){
+      if(l&1) resl = combine(resl, arr[l++]);
+      if(r&1) resr = combine(arr[--r], resr);
+    }
+    return combine(resl, resr);
+  }
+};
+\end{cpp}
+
+\subsection{Lazy propagation (0-indexed)}
+\begin{cpp}
+struct Seglazy{
+  typedef int T1; // Change this to what you need
+  typedef int T2; // Change this to what you need
+  T1 id = 0, initval = 0;
+  T2 unused = 0;
+  T1 combine(T1 a, T1 b){"Real a <-- b";}
+  T2 combineL(T2 a, T2 b){"Lazy a <-- b";}
+  void unlazy(int i, int nl, int nr){}
+  
+  int n; vector<T1> arr; vector<T2> lazy;
+  Seglazy(int sz): n{1} {
+    while(n < sz) n<<=1;
+    arr.resize(n*2, initval); lazy.resize(n*2, unused);
+  }
+  void propagate(int x, int nl, int nr){
+    if(lazy[x] == unused) return;
+    if(x < n){
+      lazy[x*2] = combineL(lazy[x*2], lazy[x]);
+      lazy[x*2+1] = combineL(lazy[x*2+1], lazy[x]);
+    }
+    unlazy(x, nl, nr);
+    lazy[x] = unused;
+  }
+  void update(int l,int r,T2 val)
+    {update(l,r,val,1,0,n-1);}
+  void update(int l,int r,T2 val,int x,int nl,int nr){
+    propagate(x, nl, nr);
+    if(r < nl || nr < l) return;
+    if(l <= nl && nr <= r){
+      lazy[x] = combineL(lazy[x], val);
+      propagate(x, nl, nr);
+      return;
+    }
+    int mid = (nl + nr) / 2;
+    update(l,r,val,x*2,nl,mid);
+    update(l,r,val,x*2+1,mid+1,nr);
+    arr[x] = combine(arr[x*2], arr[x*2+1]);
+  }
+  T1 query(int l,int r){return query(l,r,1,0,n-1);}
+  T1 query(int l,int r,int x,int nl,int nr){
+    propagate(x, nl, nr);
+    if(r < nl || nr < l) return id;
+    if(l <= nl && nr <= r) return arr[x];
+    int mid = (nl + nr) / 2;
+    return combine(query(l,r,x*2,nl,mid),
+                   query(l,r,x*2+1,mid+1,nr));
+  }
+};
+\end{cpp}
+
+\subsection{Fenwick (0-indexed)}
+\begin{cpp}
+template <typename T>
+struct Fenwick{
+  int n; vector<T> arr;
+  Fenwick(int n): n{n}, arr(n) {}
+  void add(int i, T val){
+    while(i < n) arr[i]+= val, i |= i+1;
+  }
+  T getsum(int i){
+    T res = 0;
+    while(i >= 0) res+= arr[i], i = (i&(i+1))-1;
+    return res;
+  }
+  int kth(int k){
+    int l = 0, r = arr.size();
+    for(int i=0; i<=lsz; i++){
+      int mid = (l+r)>>1;
+      ll val = arr[mid-1];
+      if(val >= k) r = mid;
+      else l = mid, k-= val;
+    }
+    return l;
+  }
+};
+\end{cpp}
+
+\subsection{Range Update Range Query Fenwick}
+\begin{cpp}
+struct RangeFenwick{
+  vector<ll> arrmul, arradd;
+  RangeFenwick(int n): arrmul(n), arradd(n){}
+  void update(int l, int r, ll val){
+    zeroupdate(l, val, -val*(l-1));
+    zeroupdate(r, -val, val*r);
+  }
+  ll intersum(int i, int j){
+    return getsum(j) - getsum(i-1);
+  }
+
+  void zeroupdate(int i, ll mul, ll add){
+    for(; i<arrmul.size(); i|=i+1)
+      arrmul[i]+= mul, arradd[i]+= add;
+  }
+  ll getsum(int i){
+    ll mul = 0, add = 0, start = i;
+    for(; i>=0; i=(i&(i+1))-1)
+      mul+= arrmul[i], add+= arradd[i];
+    return mul*start + add;
+  }
+};
+\end{cpp}
+
+\subsection{Persistent Segtree}
+TODO
+
+\subsection{Euler Tour Tree}
+\begin{cpp}
+// i subtree -> [start[i], end[i]]
+void dfs(int v){
+    start[v] = i, seq[i++] = v;
+    for(int u: adj[v]) if(start[u] == -1) dfs(u);
+    end[v] = i-1;
+}
+\end{cpp}
+
+\subsection{Heavy-Light Decomposition}
+\begin{cpp}
+// YOU MUST CALL init !!!
+// in = in-number of the node, usable for the segment tree
+// top = top node of the group containing this node
+
+struct HLD{
+  int n, t;
+  vector<vector<int>> adj, tadj;
+  vector<int> sz, par, dep, in, top;
+
+  HLD(int n): n{n}, t{0}, adj(n+1), tadj(n+1),
+    sz(n+1), par(n+1), dep(n+1), in(n+1), top(n+1) {}
+  void connect(int a, int b)
+    {adj[a].push_back(b); adj[b].push_back(a);}
+
+  void dfs_tree(int v, int prev=-1){
+    for(int u: adj[v]){
+      if(u == prev) continue;
+      tadj[v].push_back(u); par[u] = v; dep[u] = dep[v]+1;
+      dfs_tree(u, v);
+    }
+  }
+  void dfs_sz(int v){
+    sz[v] = 1;
+    for(int &u: tadj[v]){
+      dfs_sz(u); sz[v]+= sz[u];
+      if(sz[u] > sz[tadj[v][0]]) swap(u, tadj[v][0]);
+    }
+  }
+  void dfs_hld(int v){
+    in[v] = t++;
+    for(int u: tadj[v])
+      top[u] = (u==tadj[v][0]? top[v]:u), dfs_hld(u);
+  }
+  void init(int i=1){
+    dfs_tree(i); adj.clear(); dfs_sz(i); dfs_hld(i);
+  }
+};
+\end{cpp}

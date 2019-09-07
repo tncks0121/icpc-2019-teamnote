@@ -1,0 +1,45 @@
+\documentclass[10pt,landscape,a4paper]{article}
+\usepackage[legalpaper, landscape, margin=0.5in]{geometry}
+\usepackage{minted}
+\usepackage{xcolor}
+\usepackage{kotex}
+\usepackage{multicol}
+
+\newenvironment{cpp}
+  {\VerbatimEnvironment
+   \begin{minted}[frame=lines]{c++}}
+  {\end{minted}}
+
+\begin{document}
+\begin{multicols}{3}
+\tableofcontents
+
+\section{Setting}
+  \input{Basic.tex}
+\section{Math (Theory)}
+  \input{MathTheory.tex}
+\section{Math (Algo)}
+  \input{Math.tex}
+\section{String}
+  \input{String.tex}
+\section{Geometry}
+  \input{Geometry.tex}
+\section{Graph: Trees}
+  \input{Tree.tex}
+\section{Graph: Flow and Matching}
+  \input{FlowMatch.tex}
+\section{Graph: Misc}
+  \input{Graph.tex}
+\section{Misc.}
+  \input{Misc.tex}
+
+\subsection{References}
+\begin{cpp}
+/*
+https://github.com/koosaga/olympiad/tree/master/Library
+idk (TODO)
+*/
+\end{cpp}
+
+\end{multicols}
+\end{document}

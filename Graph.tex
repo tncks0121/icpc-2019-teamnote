@@ -1,0 +1,233 @@
+\subsection{Topological Sort (1-indexed)}
+\begin{cpp}
+struct Graph{
+  int n; vector<vector<int>> adj;
+  Graph(int n): n{n}, adj(n+1) {}
+  void connect(int a, int b){adj[a].push_back(b);}
+  vector<int> toposort(){
+    vector<int> indg(n+1), L;
+    queue<int> Q;
+    for(int i=1; i<=n; i++) for(int j: adj[i]) indg[j]++;
+    for(int i=1; i<=n; i++) if(!indg[i]) Q.push(i);
+    for(int i=0; i<n; i++){
+      if(Q.empty()) assert(0); // Change this if you need
+      int p = Q.front(); Q.pop();
+      L.push_back(p);
+      for(int j: adj[p]) if (!--indg[j]) Q.push(j);
+    }
+    return L;
+  }
+};
+\end{cpp}
+
+\subsection{SCC (1-indexed)}
+\begin{cpp}
+struct Graph{
+  int n, cnt, sccnt; vector<vector<int>> adj;
+  vector<int> up, visit, scx, stk;
+  Graph(int n): n(n), adj(n+1), up(n+1), visit(n+1), scx(n+1) {}
+  void connect(int a, int b){adj[a].push_back(b);}
+  void dfs(int v){
+    up[v] = visit[v] = ++cnt;
+    stk.push_back(v);
+    for(int nxt: adj[v]){
+      if(!visit[nxt]) dfs(nxt), up[v] = min(up[v], up[nxt]);
+      else if(!scx[nxt]) up[v] = min(up[v], visit[nxt]);
+    }
+    if(up[v] == visit[v]){
+      ++sccnt; int t = -1;
+      while(!stk.empty() && t != v){
+        t = stk.back(); stk.pop_back();
+        scx[t] = sccnt;
+      }
+    }
+  }
+  void getscc(){
+    cnt = sccnt = 0;
+    for(int i=1; i<=n; i++) if(!visit[i]) dfs(i);
+  }
+  vector<vector<int>> scc(){
+    getscc();
+    vector<vector<int>> res(sccnt);
+    for(int i=1; i<=n; i++) res[scx[i]-1].push_back(i);
+    return res;
+  }
+  vector<vector<int>> dag(){
+    getscc();
+    vector<vector<int>> res(*max_element(entire(scx))+1);
+    for(int v=1; v<=n; v++){
+      for(int u: adj[v]) if(scx[u] != scx[v]) 
+        res[scx[v]].push_back(scx[u]);
+    }
+    return res;
+  }
+  vector<vector<int>> rdag(){
+    getscc();
+    vector<vector<int>> res(*max_element(entire(scx))+1);
+    for(int v=1; v<=n; v++){
+      for(int u: adj[v]) if(scx[u] != scx[v]) 
+        res[scx[u]].push_back(scx[v]);
+    }
+    return res;
+  }
+};
+\end{cpp}
+
+\subsection{2-SAT}
+\begin{cpp}
+struct TwoSAT{
+  int n; Graph G;
+  TwoSAT(int var): n{var}, G{Graph(2*var+1)} {}
+  int v(int x){return n+x+1;}
+  void cnf(int x, int y)
+    {G.connect(v(-x),v(y)); G.connect(v(-y),v(x));}
+  bool solve(){
+    G.getscc();
+    for(int x=1; x<=n; x++) if(G.scx[v(x)] == G.scx[v(-x)])
+      return false;
+    return true;
+  }
+};
+
+struct TwoSATsol{
+  vector<int> solve(){
+    vector<vector<int>> scc = G.scc();
+    vector<int> sol(n+1, -1);
+    for(int x=1; x<=n; x++)
+      if(G.scx[v(x)] == G.scx[v(-x)]) return {0};
+    for(int i = scc.size()-1; i>=0; i--)
+      for(int var: scc[i]) if(sol[abs(var-n-1)] == -1)
+        sol[abs(var-n-1)] = var<n+1;
+    return sol;
+  }
+};
+\end{cpp}
+
+\subsection{Stoer-Wagner (0-indexed)}
+\begin{cpp}
+struct Mincut{
+  int n; vector<vector<int>> graph;
+  Mincut(int n): n{n}, graph(n, vector<int>(n)) {}
+  void connect(int a, int b, int w)
+    {if(a != b) graph[a][b]+= w, graph[b][a]+= w;}
+  
+  pair<int, pair<int, int>> stmin(vector<int> &active){
+    vector<int> key(n), v(n);
+    int s = -1, t = -1;
+    for(size_t i=0; i<active.size(); i++){
+      int maxv = -1, cur = -1;
+      for(auto j: active) if(!v[j] && maxv < key[j])
+        maxv = key[j], cur = j;
+      t = s, s = cur; v[cur] = 1;
+      for(auto j: active) key[j]+= graph[cur][j];
+    }
+    return make_pair(key[s], make_pair(s, t));
+  }
+
+  vector<int> cut;
+  int solve(){
+    int res = numeric_limits<int>::max();
+    vector<vector<int>> grps; vector<int> active;
+    cut.resize(n);
+    for(int i=0; i<n; i++) grps.emplace_back(1, i);
+    for(int i=0; i<n; i++) active.push_back(i);
+    while(active.size() >= 2){
+      auto stcut = stmin(active);
+      if(stcut.first < res){
+        res = stcut.first;
+        fill(entire(cut), 0);
+        for(auto v: grps[stcut.second.first]) cut[v] = 1;
+      }
+      int s, t; tie(s, t) = stcut.second;
+      if(grps[s].size() < grps[t].size()) swap(s, t);
+      active.erase(find(entire(active), t));
+      grps[s].insert(grps[s].end(), entire(grps[t]));
+      for(int i=0; i<n; i++)
+        graph[i][s]+= graph[i][t], graph[i][t] = 0;
+      for(int i=0; i<n; i++)
+        graph[s][i]+= graph[t][i], graph[t][i] = 0;
+      graph[s][s] = 0;
+    }
+    return res;
+  }
+};
+\end{cpp}
+
+\subsection{Offline Dynamic Connectivity}
+\begin{cpp}
+struct DisjointHist{
+  vector<int> par, sz;
+  vector<pair<int, int>> history;
+  DisjointHist(int n): par(n+1), sz(n+1, 1)
+    {iota(entire(par), 0);}
+
+  void un(int x, int y){
+    x = fd(x), y = fd(y);
+    if(x == y) return;
+    if(sz[x] < sz[y]) swap(x, y);
+    history.push_back({x, y});
+    par[y] = x, sz[x]+= sz[y];
+  }
+  int fd(int x){return par[x]!=x? fd(par[x]) : x;}
+  void rollback(){
+    auto [x,y] = history.back(); history.pop_back();
+    par[x] = x, par[y] = y, sz[x]-= sz[y];
+  }
+};
+
+struct ODC{
+  int n, Q, time = 0;
+  DisjointHist DS;
+  vector<map<int,int>> adj; // [u][v] -> addtime
+  vector<int> end; // ending time of edge added at i
+  vector<int> qtype; // 1 add 2 remove 3 question
+  vector<pair<int,int>> quest; // pair of v at query i
+  vector<bool> answer; // answer to the questions
+  ODC(int n, int Q): n{n}, Q{Q}, DS(n), adj(n+1),
+    end(Q), qtype(Q), quest(Q), answer(Q) {}
+
+  void add(int x, int y){
+    if(x > y) swap(x, y);
+    quest[time] = {x,y}, qtype[time] = 1, end[time] = Q-1;
+    adj[x][y] = time++;
+  }
+  void rem(int x, int y){
+    if(x > y) swap(x, y);
+    quest[time] = {x,y}, qtype[time] = 2;
+    end[adj[x][y]] = time++;
+  }
+  void query(int x, int y){
+    if(x > y) swap(x, y);
+    quest[time] = {x, y}, qtype[time++] = 3;
+  }
+
+  void solve(){
+    vector<int> E;
+    for(int i=0; i<Q; i++) if(qtype[i] == 1) 
+      E.push_back(i);
+    solve(0, Q-1, E);
+  };
+  void solve(int s, int e, vector<int> &E){
+    if(s > e) return;
+    int startnum = DS.history.size();
+
+    int mid = (s+e)/2;
+    vector<int> E1, E2;
+    for(int i: E){
+      auto [x,y] = quest[i];
+      if(i <= s && e <= end[i]) DS.un(x, y);
+      else{
+        if(!(end[i] < s || i > mid)) E1.push_back(i);
+        if(!(end[i] < mid+1 || i > e)) E2.push_back(i);
+      }
+    }
+
+    if(s == e){
+      auto [x,y] = quest[s];
+      if(qtype[s] == 3) answer[s] = (DS.fd(x)==DS.fd(y));
+    }
+    else solve(s, mid, E1), solve(mid+1, e, E2);
+    while(DS.history.size() != startnum) DS.rollback();
+  }
+};
+\end{cpp}
