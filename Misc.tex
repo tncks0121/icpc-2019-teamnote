@@ -34,6 +34,19 @@ int hungarian(vector<vector<int>>& mat){
 }
 \end{cpp}
 
+\subsection{Lindström–Gessel–Viennot lemma}
+
+edge-weighted DAG $G$가 있다. 출발점 집합 $A$, 도착점 집합 $B$ ($|A| = |B| = n$, $A \cap B = \emptyset$에 대해, 
+
+\begin{itemize}
+    \item $\omega(P)$: 경로 $P$에 있는 간선 가중치들의 곱
+    \item $e(a, b) = \sum_{P:a \rightarrow b} \omega(P)$ (모든 $a \rightarrow b$ 경로에 대해 합쳐줌)
+    \item $M_{i,j} = e(a_{i}, b_{j})$로 두면, $A$에서 $B$로 가는 $n$개의 non-intersecting path $P_{1}, \cdots, P_{n}$에 대해 ($P_i$는 $a_i$에서 $b_{\sigma(i)}$로 가는 경로)
+    $$\det(M) = \sum_{(P_1, P_2, \cdots, P_n) : A \rightarrow B} sign(\sigma(P)) \prod_{i=1}^{n} \omega(P_{i})$$
+\end{itemize}
+
+용례: $\sigma$로 가능한 게 $[1, 2, \cdots, n]$뿐이라면, $\omega = 1$로 설정하고 모든 non-intersecting path의 경우의 수를 구할 수 있음.
+
 \subsection{O(1) RMQ}
 TODO
 
