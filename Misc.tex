@@ -47,17 +47,82 @@ edge-weighted DAG $G$가 있다. 출발점 집합 $A$, 도착점 집합 $B$ ($|A
 
 용례: $\sigma$로 가능한 게 $[1, 2, \cdots, n]$뿐이라면, $\omega = 1$로 설정하고 모든 non-intersecting path의 경우의 수를 구할 수 있음.
 
-\subsection{O(1) RMQ}
-TODO
-
 \subsection{Convex Hull Trick}
-TODO
+
+점화식이 $D[i] = \min_{j<i}(a[j]x[i] + b[j]) + const[i]$이고, $a[j]$가 오름/내림차순이면, $O(N^2)$이 $O(NlogN)$ 또는 $O(N)$으로 줄어든다.
+
+\begin{cpp}
+// Assumption x[i] <= x[i+1], decreasing slopes
+template <typename T>
+struct CHT{
+  vector<pair<T,T>> hull; int p=0;
+  long double cr(int x){
+    auto [ax,bx] = hull[x]; auto [ay,by] = hull[x+1];
+    return (long double)(by-bx) / (ax-ay);
+  }
+
+  void insert(T a, T b){
+    hull.push_back({a,b});
+    while(hull.size() > 2 && cr(hull.size()-3) >
+      cr(hull.size()-2)) hull.erase(hull.end()-2);
+  }
+
+  T get(T x){
+    while(p+1 < hull.size() && cr(p) <= x) p++;
+    auto [a,b] = hull[p];
+    return a*x + b;
+  }
+};
+\end{cpp}
+
+TODO NlogN
+
+TODO increasing
 
 \subsection{DNC Optimization}
-TODO
+
+점화식이 $D[t][i] = \min_{k<i}(D[t-1][k] + C[k][i])$이고, $A[t][i]$를 $D[t][i]$가 최소가 되기 위한 최소 $k$라고 두었을 때 $A[t][i] \leq A[t][i+1]$이라면, $O(KN^2)$가 $O(KNlogN)$으로 줄어든다.
+
+특수 케이스: $C[a][c]+C[b][d] \leq C[a][d]+C[b][c]$ for $a \leq b \leq c \leq d$
+
+TODO 코드
 
 \subsection{Knuth Optimization}
-TODO
+
+점화식이 $D[i][j] = \min_{i<k<j}(D[i][k]+D[k][j])+C[i][j]$이고, \begin{enumerate}
+    \item $C[a][c]+C[b][d] \leq C[a][d]+C[b][c]$ for $a \leq b \leq c \leq d$
+    \item $C[b][c] \leq C[a][d]$ for $a \leq b \leq c \leq d$
+\end{enumerate}
+
+가 모두 성립하면, $A[i][j]$를 $D[i][j]$가 최소가 되기 위한 최소 $k$라고 두었을 때 $A[i][j-1] \leq A[i][j] \leq A[i+1][j]$ 이다. $O(N^3)$이 $O(N^2)$으로 줄어든다.
 
 \subsection{Regex}
+
 TODO
+
+\subsection{Fast IO}
+
+\begin{cpp}
+static char buf[1 << 19]; // size : any number >1024
+static int idx = 0;
+static int bytes = 0;
+static inline int _read() {
+  if (!bytes || idx == bytes) {
+    bytes = (int)fread(buf, sizeof(buf[0]),
+      sizeof(buf), stdin);
+    idx = 0;
+  }
+  return buf[idx++];
+}
+static inline int _readInt() {
+  int x = 0, s = 1;
+  int c = _read();
+  while (c <= 32) c = _read();
+  if (c == '-') s = -1, c = _read();
+  while (c > 32) x = 10 * x + (c - '0'), c = _read();
+  if (s < 0) x = -x;
+  return x;
+}
+\end{cpp}
+
+Thanks to koosaga.

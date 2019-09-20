@@ -25,7 +25,8 @@ struct Graph{
 struct Graph{
   int n, cnt, sccnt; vector<vector<int>> adj;
   vector<int> up, visit, scx, stk;
-  Graph(int n): n(n), adj(n+1), up(n+1), visit(n+1), scx(n+1) {}
+  Graph(int n): n(n), adj(n+1),
+    up(n+1), visit(n+1), scx(n+1) {}
   void connect(int a, int b){adj[a].push_back(b);}
   void dfs(int v){
     up[v] = visit[v] = ++cnt;
